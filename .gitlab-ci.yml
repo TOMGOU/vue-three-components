@@ -1,0 +1,90 @@
+.commons:
+  commons_cache: &commons_cache # 声明cache
+    key:
+      files:
+        # 用此文件作为cache的key,只要此文件不变,node_modules不会变
+        - yarn.lock
+    paths:
+      # 声明cache的目录
+      - node_modules/
+      - .yarn
+    # 声明cache策略
+    policy: pull-push
+
+  commons_build: &commons_build
+    allow_failure: false
+    ## 使用node:lts docker 镜像运行
+    image: node:lts
+    cache:
+      <<: *commons_cache
+    tags:
+      ## 选择打了相应 tag 的 runner 来跑这个job
+      - frontend-crsp-cicd
+    artifacts: ## 产物
+      paths: ## 产物的路径
+        - storybook-static
+      expire_in: 10 mins ## 过期时间
+
+  commons_deploy: &commons_deploy
+    allow_failure: true
+    image: registry.cn-shenzhen.aliyuncs.com/ctirobot/aliyun-oss:v1
+    ## 使用 aliyun-oss镜像
+    tags:
+      ## 声明使用的runner
+      - frontend-crsp-cicd
+
+stages:
+  - dep
+  - dev:build
+  - dev:deploy
+
+variables:
+  MINIO_BUCKET_DEV_NAME: tong-frontend-demo
+  MINIO_HOST: http://company-pvt.minio.ctirobot.com:9100
+
+dep:
+  stage: dep
+  image: company-pvt.harbor.ctirobot.com/yarnpkg/node-yarn:node7
+  cache:
+    policy: pull-push
+    <<: *commons_cache
+  tags:
+    - frontend-crsp-cicd
+  # 只有当 yarn.lock 被修改时，才执行 yarn install
+  only:
+    changes:
+      - yarn.lock
+  script:
+    - yarn install --quite --registry=http://192.168.14.248:8181/repository/npm-groups/
+
+dev:build:
+  <<: *commons_build
+  when: manual
+  dependencies:
+    - dep
+  stage: dev:build
+  script: ## 执行的脚本
+    - yarn --registry=http://192.168.14.248:8181/repository/npm-groups/
+    - ls -al
+    - rm -rf storybook-static
+    - yarn run build-storybook
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"' ## 只有 master 分支才能运行此作业
+
+dev:deploy:
+  <<: *commons_deploy
+  stage: dev:deploy
+  when: on_success
+  dependencies:
+    - dev:build
+  before_script:
+    - mc alias set minio $MINIO_HOST $MINIO_ACCESS_KEY  $MINIO_SECRET_KEY
+    - mc rm --recursive --force minio/$MINIO_BUCKET_DEV_NAME
+  script:
+    - mc cp -r storybook-static/ minio/$MINIO_BUCKET_DEV_NAME
+  # after_script:
+    # - 'curl "$QYWEIXIN_DEVOPS_URL" -H "Content-Type: application/json" -d "{\"msgtype\": \"markdown\",\"markdown\": {\"content\": \"动效组件库已发布.\n >Env: Development\n >Application: vue-three-components \"} }"'
+  needs:
+    - dev:build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"' ## 只有 master 分支才能运行此作业
