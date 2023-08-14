@@ -12,7 +12,8 @@
   "files": ["packages"],
   "scripts": {
     "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "build-storybook": "build-storybook",
+    "gh-pages": "./git.sh"
   },
   "dependencies": {
     "vue": "^3.2.45",
