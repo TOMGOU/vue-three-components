@@ -1,7 +1,7 @@
 {
   "name": "@candelas/vue_three_components",
   "private": false,
-  "version": "0.1.5",
+  "version": "0.1.7",
   "keywords": ["three", "vue", "components", "animation", "mark", "shaders"],
   "type": "module",
   "main": "packages/index.ts",

@@ -3,7 +3,7 @@
 
 ## 文档地址
 
-http://mister-t.cartoon.ctirobot.com:8080/
+https://tomgou.github.io/vue-three-components/
 
 ## npm 地址
 

@@ -8,7 +8,7 @@ export default {
   argTypes: {
     url: { 
       control: 'text',
-      default: '/texture/sign-in_bg.png'
+      default: './assets/sign-in_bg.png'
     },
     width: {
       type: Number,
